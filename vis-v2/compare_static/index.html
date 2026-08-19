@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slide comparison</title>
+  <link rel="stylesheet" href="/compare.css">
+</head>
+<body>
+  <div id="bar">
+    <label class="ctl">deck <select id="deck"></select></label>
+    <label class="ctl">task <select id="task"></select></label>
+    <label class="ctl">response <select id="response"></select></label>
+    <button id="load">Load</button>
+    <span class="sep"></span>
+    <label class="ctl"><input type="checkbox" id="sync" checked> sync scroll</label>
+    <span class="sep"></span>
+    <span class="muted">show:</span>
+    <div id="modes">
+      <button data-mode="all" class="on">All slides</button>
+      <button data-mode="1-2">Δ orig·target</button>
+      <button data-mode="2-3">Δ target·resp</button>
+      <button data-mode="1-3">Δ orig·resp</button>
+      <button data-mode="all3">Δ any</button>
+    </div>
+    <button id="highlight" title="box the elements that differ from the target">Highlight edits</button>
+    <span id="score" class="muted"></span>
+    <span id="status" class="muted"></span>
+  </div>
+
+  <div id="cols">
+    <section class="col" id="col-original">
+      <div class="col-head">Original</div>
+      <div class="col-body"></div>
+    </section>
+    <section class="col" id="col-target">
+      <div class="col-head">Target (GT)</div>
+      <div class="col-body"></div>
+    </section>
+    <section class="col" id="col-response">
+      <div class="col-head">Response</div>
+      <div class="col-body"></div>
+    </section>
+  </div>
+
+  <script src="/compare.js"></script>
+</body>
+</html>

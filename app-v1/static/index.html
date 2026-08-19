@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slide attribute-link annotator</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="topbar">
+    <span id="deck-title">deck</span>
+    <span id="active-info" class="muted">no relationship selected</span>
+    <span class="spacer"></span>
+    <label class="ctl">review
+      <select id="review-select"><option value="">(your annotation)</option></select>
+    </label>
+    <button id="export-cands" title="write the seeded candidates to a file for participants">Export candidates</button>
+    <button id="hide-filmed" title="show only highlighted slides">Hide filmed</button>
+    <button id="remove-slides" title="remove selected slides' objects from the active link" disabled>Remove slides' objects</button>
+    <button id="focus-only" title="show only entries related to the focused slide" disabled>Only related</button>
+    <label class="ctl">box color
+      <input type="color" id="box-color" value="#8b0000">
+    </label>
+    <button id="save-btn">Save</button>
+    <span id="save-status" class="muted"></span>
+  </div>
+
+  <div id="main">
+    <!-- LHS: candidates -->
+    <aside class="panel" id="lhs">
+      <div class="panel-head">
+        Candidates <button id="sort-cand" title="sort by object count">Sort ⇅</button>
+      </div>
+      <div class="panel-list" id="candidate-list"></div>
+    </aside>
+
+    <!-- Middle: thumbnail grid -->
+    <section id="grid-wrap">
+      <div id="offscreen-up" class="offscreen hidden"></div>
+      <div id="offscreen-down" class="offscreen hidden"></div>
+      <div id="grid"></div>
+    </section>
+
+    <!-- RHS: drafts -->
+    <aside class="panel" id="rhs">
+      <div class="panel-head">
+        Drafts <button id="add-draft" title="new relationship">+</button>
+      </div>
+      <div class="panel-list" id="draft-list"></div>
+    </aside>
+
+    <!-- Styles: maximal bicliques over the drafts -->
+    <aside class="panel" id="styles">
+      <div class="panel-head">Styles</div>
+      <div class="panel-list" id="style-list"></div>
+    </aside>
+  </div>
+
+  <!-- Enlarged slide overlay (hidden by default) -->
+  <div id="overlay" class="hidden">
+    <div id="overlay-backdrop"></div>
+    <div id="overlay-slide">
+      <button id="overlay-close" title="close">✕</button>
+      <div id="overlay-body">
+        <div id="overlay-canvas"></div>
+        <div id="overlay-objlist"></div>
+      </div>
+      <div id="overlay-hint" class="muted"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font: 13px/1.4 -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #23272e; background: #eceff3; display: flex; flex-direction: column;
+  --slide-aspect: 4 / 3;
+}
+
+#bar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: #fff; border-bottom: 1px solid #d5dae2; flex: 0 0 auto; flex-wrap: wrap;
+}
+.ctl { display: inline-flex; align-items: center; gap: 4px; color: #4b5563; }
+.ctl select { font: inherit; padding: 2px 4px; }
+.sep { width: 1px; align-self: stretch; background: #d5dae2; margin: 0 2px; }
+.muted { color: #8b95a3; }
+button {
+  font: inherit; padding: 3px 9px; border: 1px solid #c3cad6; border-radius: 5px;
+  background: #f6f8fb; cursor: pointer;
+}
+button:hover { background: #eef2f7; }
+#modes button.on { background: #4c8bf5; border-color: #4c8bf5; color: #fff; }
+#load { background: #2f9e58; border-color: #2f9e58; color: #fff; }
+
+#cols { flex: 1 1 auto; display: flex; gap: 8px; padding: 8px; min-height: 0; }
+.col {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  background: #fff; border: 1px solid #d5dae2; border-radius: 8px; overflow: hidden;
+}
+.col-head {
+  flex: 0 0 auto; padding: 6px 10px; font-weight: 600; color: #374151;
+  border-bottom: 1px solid #e4e8ee; background: #fafbfc;
+}
+.col-body { position: relative; flex: 1 1 auto; overflow-y: auto; padding: 8px; }
+
+.slide {
+  position: relative; margin: 0 auto 10px; width: 100%;
+  aspect-ratio: var(--slide-aspect);
+  border: 1px solid #dfe4ea; border-radius: 4px; overflow: hidden; background: #fff;
+}
+.slide img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.slide .num {
+  position: absolute; left: 4px; top: 4px; z-index: 1;
+  font-size: 10px; color: #444; background: #ffffffcc; border-radius: 3px; padding: 0 5px;
+}
+#highlight.on { background: #e08a00; border-color: #e08a00; color: #fff; }
+
+.hlbox { position: absolute; z-index: 2; pointer-events: none; border-radius: 2px; }
+.hlbox.wrong   { border: 2px solid #e11d48; box-shadow: 0 0 0 1px #fff6; }
+.hlbox.over    { border: 2px solid #9333ea; box-shadow: 0 0 0 1px #fff6; }
+.hlbox.missed  { border: 2px dashed #f59e0b; box-shadow: 0 0 0 1px #fff6; }
+.hlbox.overlap { border: 2px dotted #e11d48; background: #e11d4820; }
+.hlbox.intended { border: 2px solid #16a34a; }
+.empty { color: #9aa4b2; text-align: center; padding: 24px 0; }

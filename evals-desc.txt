@@ -1,0 +1,31 @@
+Each slide is parsed to an intermediate representation.
+The IR records each element in this slide with their attributes.
+It is assumed that the target slide and the response slide are created by duplicating the original slide
+It is also assumed that edits update attributes but do not create or delete slides or objects.
+When comparing two slides (e.g. original vs response), we compare for each corresponding element these attributes: x, y, w, h, rotation, fill, line color, line width, line dash, opacity. 
+To support text-related attributes, such as highlighting or font color, which can be applied to select characters (not merely to an entire text box), we compare each corresponding characters' color, bold-ness, italic-ness, and content. 
+We assume that edits do not change the text content itself. 
+For numerical values like x and y, we have a small tolerance. 
+Each unit of difference, a "cell," is a tuple of (slide, element, its key i.e. attribute value)
+
+Let G be the cells that changed from the original to the target slide. These are the correct edits
+Let P denotes cells that changed from the original to the response slide. These may or may not be correct edits.
+
+We compare the recall (lower when the response misses an edit), precision (lower when the response edits something that should not have been touched), and the F1 score.
+
+We penalize overlap that appear in the response but *not* the target slides. That is, we take points off for overlaps that are wrongly introduced by the edit. 
+
+We report these numbers:
+P/R/F1 wrt scope: are the right things edited? (does not have to be the correct value)
+P/R/F1: are the right things edited and to the correct value? (full/strict correctness)
+Value-wise accuracy: of the edits that passes "P/R/F1 wrt scope," which fraction has the right value?
+Overlaps: bounding-box overlaps
+
+The summary or "headline" score is max(0, strict_F1 - 0.1 * num_overlaps)
+
+Visualization colors:
+- green bbox highlights what should have changed (target vs original)
+- purple bbox highlights what should not have changed (the edit is present in the response but not in the target)
+- red bbox highlights edits that have the correct element but wrong value
+- dashed orange bbox highlights edits that are missed (in target, not in response)
+- dotted red bbox highlights an overlap introduced by the response

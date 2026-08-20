@@ -72,6 +72,7 @@ async function load() {
   if (!d.ok) { setStatus("error: " + d.error); return; }
   S.data = d;
   document.documentElement.style.setProperty("--slide-aspect", `${d.w} / ${d.h}`);
+  S.frac = slideRect();
   const structural = !!(d.original && d.original.ssigs);
   const note = structural ? "" : " · pixel diff (structural unavailable)";
   setStatus(`${d.n} slides${d.response ? "" : " · no response loaded"}${note}`);
@@ -91,6 +92,21 @@ function showScore() {
     `<b>score ${m.score.toFixed(2)}</b> · scope F1 ${m.scope.f1.toFixed(2)} ` +
     `· strict F1 ${m.strict.f1.toFixed(2)} · value ${(m.value_accuracy * 100).toFixed(0)}% ` +
     `· overlaps ${m.bad_overlaps} · edits ${m.pred_edits}/${m.gt_edits}`;
+}
+
+// The slide's rectangle within the rendered image (0..1), accounting for the
+// letterbox/pillarbox when LibreOffice exports the slide onto a differently
+// shaped page.
+function slideRect() {
+  const d = S.data;
+  const ia = d.w / d.h;
+  const sa = d.slide_aspect || ia;
+  let fx0 = 0, fy0 = 0, fw = 1, fh = 1;
+  if (Math.abs(ia - sa) > 1e-3) {
+    if (ia > sa) { fw = sa / ia; fx0 = (1 - fw) / 2; }   // bands left/right
+    else { fh = ia / sa; fy0 = (1 - fh) / 2; }           // bands top/bottom
+  }
+  return { fx0, fy0, fw, fh };
 }
 
 // eval slide record for a given slide index
@@ -150,6 +166,7 @@ function render() {
       num.className = "num"; num.textContent = "s" + (i + 1);
       const img = document.createElement("img");
       img.loading = "lazy"; img.src = "/images/" + src.images[i];
+      img.style.aspectRatio = `${S.data.w} / ${S.data.h}`;   // exact PNG aspect
       box.appendChild(num); box.appendChild(img);
       if (S.highlight) drawBoxes(box, c, i);
       col.appendChild(box);
@@ -169,10 +186,17 @@ function drawBoxes(box, col, i) {
 
   const add = (e, cls, title) => {
     if (!e) return;
+    const R = S.frac || { fx0: 0, fy0: 0, fw: 1, fh: 1 };
     const b = document.createElement("div");
     b.className = "hlbox " + cls; b.title = title;
-    b.style.left = (e.x * 100) + "%"; b.style.top = (e.y * 100) + "%";
-    b.style.width = (e.w * 100) + "%"; b.style.height = (e.h * 100) + "%";
+    b.style.left = ((R.fx0 + e.x * R.fw) * 100) + "%";
+    b.style.top = ((R.fy0 + e.y * R.fh) * 100) + "%";
+    b.style.width = (e.w * R.fw * 100) + "%";
+    b.style.height = (e.h * R.fh * 100) + "%";
+    if (e.rot) {                                   // PPTX rotates about the shape centre
+      b.style.transformOrigin = "center";
+      b.style.transform = `rotate(${e.rot}deg)`;
+    }
     box.appendChild(b);
   };
 

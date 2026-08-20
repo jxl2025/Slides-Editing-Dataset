@@ -35,10 +35,9 @@ button:hover { background: #eef2f7; }
 
 .slide {
   position: relative; margin: 0 auto 10px; width: 100%;
-  aspect-ratio: var(--slide-aspect);
   border: 1px solid #dfe4ea; border-radius: 4px; overflow: hidden; background: #fff;
 }
-.slide img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.slide img { display: block; width: 100%; height: auto; }
 .slide .num {
   position: absolute; left: 4px; top: 4px; z-index: 1;
   font-size: 10px; color: #444; background: #ffffffcc; border-radius: 3px; padding: 0 5px;

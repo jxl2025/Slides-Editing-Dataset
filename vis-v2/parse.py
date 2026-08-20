@@ -387,6 +387,18 @@ def _run_color_hex(run, theme_map) -> Optional[str]:
     return _rgb(run.font.color)                    # fallback to explicit rgb
 
 
+def _run_highlight(run, theme_map) -> Optional[str]:
+    from pptx.oxml.ns import qn
+    try:
+        rPr = run._r.find(qn("a:rPr"))
+        hl = rPr.find(qn("a:highlight")) if rPr is not None else None
+        if hl is not None:
+            return _color_from_container(hl, theme_map)
+    except Exception:
+        pass
+    return None
+
+
 def _color_from_container(container, theme_map) -> Optional[str]:
     from pptx.oxml.ns import qn
     for tag in ("a:srgbClr", "a:schemeClr", "a:sysClr", "a:scrgbClr"):
@@ -547,6 +559,7 @@ def _pptx_text(shape, theme_map, ctx=None) -> Optional[TextContent]:
         runs = []
         for r in p.runs:
             f = r.font
+            ul = f.underline
             runs.append(Run(
                 t=r.text,
                 font=f.name,
@@ -554,6 +567,8 @@ def _pptx_text(shape, theme_map, ctx=None) -> Optional[TextContent]:
                 bold=f.bold,
                 italic=f.italic,
                 color=_run_color_hex(r, theme_map) or inherited,   # WYSIWYG effective color
+                underline=(None if ul is None else bool(ul)),
+                highlight=_run_highlight(r, theme_map),
             ))
         if not runs and p.text:
             runs = [Run(t=p.text)]

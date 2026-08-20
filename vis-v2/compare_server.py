@@ -156,19 +156,29 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": False, "error": str(exc)}, 500)
 
         # Structural diff + evaluation (best-effort; falls back to pixel diff).
+        # If the three decks aren't all .pptx, route them through the same
+        # LibreOffice serializer so representation-only diffs cancel out.
+        srcs = [deck["orig"], target] + ([resp_path] if resp_path else [])
+        normalize = {os.path.splitext(p)[1].lower() for p in srcs} != {".pptx"}
         struct_by_col = {"original": None, "target": None, "response": None}
         ev = None
+        slide_aspect = None
         try:
-            so = struct.parse_struct(deck["orig"], STATE["work_dir"])
-            st = struct.parse_struct(target, STATE["work_dir"])
+            so, slide_aspect = struct.parse_struct(deck["orig"], STATE["work_dir"], normalize)
+            st, _ = struct.parse_struct(target, STATE["work_dir"], normalize)
             struct_by_col["original"] = struct.struct_payload(so)
             struct_by_col["target"] = struct.struct_payload(st)
+            if len(so) != cols["original"]["n"]:
+                print(f"WARNING: {deck['id']} original has {len(so)} parsed slides "
+                      f"but {cols['original']['n']} rendered pages — check for "
+                      f"hidden slides; boxes/eval may be misaligned.")
             if resp_path:
-                sr = struct.parse_struct(resp_path, STATE["work_dir"])
+                sr, _ = struct.parse_struct(resp_path, STATE["work_dir"], normalize)
                 struct_by_col["response"] = struct.struct_payload(sr)
                 ev = struct.evaluate(so, st, sr)
         except Exception as exc:
             ev = {"error": str(exc)}
+            slide_aspect = None
 
         def col_out(name):
             m, s = cols[name], struct_by_col[name]
@@ -181,6 +191,7 @@ class Handler(BaseHTTPRequestHandler):
         n = cols["original"]["n"]
         return self._json({"ok": True, "n": n,
                            "w": cols["original"]["w"], "h": cols["original"]["h"],
+                           "slide_aspect": slide_aspect,
                            "original": col_out("original"),
                            "target": col_out("target"),
                            "response": col_out("response"),

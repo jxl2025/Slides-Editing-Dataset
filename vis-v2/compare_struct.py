@@ -43,23 +43,33 @@ OVERLAP_PENALTY = 0.1          # subtracted from the score per introduced overla
 # --------------------------------------------------------------------------- #
 # Parsing decks into per-slide element structures
 # --------------------------------------------------------------------------- #
-def _ensure_pptx(src: str, work_dir: str) -> str:
-    if src.lower().endswith(".pptx"):
+def _ensure_pptx(src: str, work_dir: str, force: bool = False) -> str:
+    """Return a .pptx path for `src`. Converts .ppt via LibreOffice; with
+    `force=True`, also re-saves native .pptx through LibreOffice so every deck
+    goes through the *same* serializer (kills representation-only diffs)."""
+    if src.lower().endswith(".pptx") and not force:
         return src
     out_dir = os.path.join(work_dir, "converted")
     os.makedirs(out_dir, exist_ok=True)
-    stem = os.path.splitext(os.path.basename(src))[0]
-    out = os.path.join(out_dir, stem + ".pptx")
+    st = os.stat(src)
+    key = hashlib.sha1(f"{os.path.abspath(src)}|{st.st_mtime_ns}|{force}"
+                       .encode()).hexdigest()[:10]
+    out = os.path.join(out_dir, key + ".pptx")
     if os.path.exists(out):
         return out
     soffice = compare_core._soffice()
     if not soffice or not os.path.exists(soffice):
+        if src.lower().endswith(".pptx"):
+            return src                              # can't normalize; use as-is
         raise RuntimeError("need LibreOffice to read .ppt")
+    tmp = tempfile.mkdtemp()
     subprocess.run([soffice, "--headless", "--convert-to", "pptx",
-                    "--outdir", out_dir, src],
+                    "--outdir", tmp, src],
                    check=True, capture_output=True, timeout=180)
-    if not os.path.exists(out):
-        raise RuntimeError("failed to convert .ppt to .pptx")
+    produced = os.path.join(tmp, os.path.splitext(os.path.basename(src))[0] + ".pptx")
+    if not os.path.exists(produced):
+        raise RuntimeError("failed to convert to .pptx")
+    shutil.move(produced, out)
     return out
 
 
@@ -69,7 +79,9 @@ def _runs(el) -> List[Dict[str, Any]]:
         for p in el.text.paragraphs:
             for r in p.runs:
                 out.append({"text": r.t, "color": r.color,
-                            "bold": bool(r.bold), "italic": bool(r.italic)})
+                            "bold": bool(r.bold), "italic": bool(r.italic),
+                            "underline": bool(r.underline),
+                            "highlight": r.highlight})
     return out
 
 
@@ -83,10 +95,20 @@ def _elem(el) -> Dict[str, Any]:
             "opacity": s.opacity, "runs": _runs(el)}
 
 
-def parse_struct(src: str, work_dir: str) -> List[List[Dict[str, Any]]]:
-    """Per-slide list of element dicts (effective attributes)."""
-    deck = parse.load(_ensure_pptx(src, work_dir))
-    return [[_elem(el) for el in slide.elements] for slide in deck.slides]
+def parse_struct(src: str, work_dir: str,
+                 normalize: bool = False):
+    """(-> slides, slide_aspect). Per-slide element dicts plus the deck's true
+    slide aspect (w/h), needed to place boxes when the rendered image letterboxes
+    the slide. With normalize, the deck is re-serialized through LibreOffice."""
+    deck = parse.load(_ensure_pptx(src, work_dir, force=normalize))
+    slides = [[_elem(el) for el in slide.elements] for slide in deck.slides]
+    aspect = 4 / 3
+    if deck.slides:
+        sz = deck.slides[0].size or {}
+        w, h = sz.get("w_emu"), sz.get("h_emu")
+        if w and h:
+            aspect = w / h
+    return slides, aspect
 
 
 def struct_payload(slides: List[List[Dict[str, Any]]]) -> Dict[str, Any]:
@@ -96,7 +118,7 @@ def struct_payload(slides: List[List[Dict[str, Any]]]) -> Dict[str, Any]:
         canon = json.dumps(sorted(elems, key=lambda e: e["id"]), sort_keys=True)
         sigs.append(hashlib.sha1(canon.encode("utf-8")).hexdigest())
         elements.append([{"id": e["id"], "x": e["x"], "y": e["y"],
-                          "w": e["w"], "h": e["h"]} for e in elems])
+                          "w": e["w"], "h": e["h"], "rot": e["rot"]} for e in elems])
     return {"sigs": sigs, "elements": elements}
 
 
@@ -123,7 +145,7 @@ def _elem_cells(e: Dict[str, Any]) -> Dict[str, Any]:
     """Flatten an element into {attribute-key: value}."""
     cells = {k: e[k] for k in SCALAR_ATTRS}
     for i, r in enumerate(e.get("runs", [])):
-        for prop in ("color", "bold", "italic", "text"):
+        for prop in ("color", "bold", "italic", "underline", "highlight", "text"):
             cells[f"run{i}.{prop}"] = r[prop]
     return cells
 
@@ -136,6 +158,16 @@ def _changed_cells(v0: Dict[str, Any], v1: Dict[str, Any]) -> Dict[str, Any]:
         a, b = c0.get(k), c1.get(k)
         if not _val_eq(k, a, b):
             out[k] = b
+    # A stroke's width/dash only matter when a border is meaningfully visible
+    # (a colour AND a width above hairline). Serializers materialise a default
+    # sub-point width / default colour on borderless shapes, which would
+    # otherwise read as a phantom edit.
+    def _has_border(v):
+        w = v.get("line_width") or 0.0
+        return v.get("line_color") is not None and w > 1.0
+    if not _has_border(v0) and not _has_border(v1):
+        out.pop("line_width", None)
+        out.pop("line_dash", None)
     return out
 
 

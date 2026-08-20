@@ -45,6 +45,8 @@ class Run:
     bold: Optional[bool] = None
     italic: Optional[bool] = None
     color: Optional[str] = None
+    underline: Optional[bool] = None
+    highlight: Optional[str] = None       # text highlight (highlighter) colour
 
 
 @dataclass
